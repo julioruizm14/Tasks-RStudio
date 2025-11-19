@@ -1,0 +1,155 @@
+---
+title: "Tarea 1"
+author: "Julio David Ruiz Mendoza"
+subtitle: 'Representación y tabulación de datos'
+date: "Mayo 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+
+
+## Enunciado
+
+
+Vamos a analizar los datos que se encuentran en el fichero `tiendas.csv` sobre tiendas de campaña. 
+
+1. Descarga el fichero de datos `tiendas.csv` situado en <http://gauss.inf.um.es/datos/> en local o localiza la url donde se encuentra.
+
+Lee el fichero (desde local o desde la url) usando correctamente los argumentos de la función `read.table()`: `header`, `sep`, `dec`. Guarda los datos en una variable llamada `tiendCamp`.
+
+
+    
+```{r echo=TRUE}
+
+tiendaCamp <- read.table(file="http://gauss.inf.um.es/datos/tiendas.csv", header = TRUE,
+                         sep = ";", dec = "." , stringsAsFactors = TRUE)
+
+```
+
+        
+
+2.  Utilizando una sola función responde a las siguientes pregutnas:
+
+¿Cuántas tiendas de campaña componen el conjunto de datos? ¿Cuántas variables se han recogido?
+```{r}
+nrow(tiendaCamp) #tiendas de campaña
+
+ncol(tiendaCamp) #variables
+```
+
+ 90 tiendas de campaña y 7 variables
+
+3. Utilizando una sola función responde a las siguientes preguntas:
+
+- ¿Qué variables del conjunto de datos son del tipo...
+  
+        1. Numérico: 
+        2. Entero: 
+        3. Factor:
+
+- ¿Cuántas marcas de tiendas hay?
+  
+```{r}
+str(tiendaCamp)
+
+unique(tiendaCamp$marca)
+length(unique(tiendaCamp$marca)) 
+```
+
+1. Numérico: precio, peso
+2. Entero: altura y capacidad.person
+3. Factor: marca, uso, estaciones  
+
+Hay 8 marcas: Coleman, Kelty, Marmot, Milestone, Msr, Nemo, Quechua, Rei.
+
+
+4. Selecciona las variables cuantitativas, guárdalas en una variable de nombre `tiendCampC` y haz un resumen de las variables. 
+
+```{r}
+tiendaCampC <- data.frame(tiendaCamp$precio, tiendaCamp$peso, tiendaCamp$altura,
+                          tiendaCamp$capacidad.person.)
+names(tiendaCampC) <- c("precio", "peso", "altura", "capacidad.person.")
+summary(tiendaCampC)
+
+```
+ 
+Con dicha información, responde:
+
+¿Qué precio tienen de media las tiendas de campaña? ¿Cuál es el peso máximo que alcanzan?
+
+    Precio medio: 349.2 
+    Peso máximo: 9554
+
+
+5. Crea dos conjuntos de datos denominados `mochi` y `nomochi`, uno con las tiendas de uso mochilero y otro con las tiendas del resto de usos. ¿Son más caras en media las tiendas para mochileros o las de no mochileros?
+
+```{r}
+mochi <- tiendaCamp[tiendaCamp$uso == "mochilero",]
+nomochi <- tiendaCamp[tiendaCamp$uso != "mochilero",]
+
+mean(mochi$precio)
+mean(nomochi$precio)
+```
+Son más caras en media las de **no mochileros**.
+
+6. Añade una variable categórica al conjunto de datos que se llame `pesocat` que provenga de la recodificación de la variable `peso` con los siguientes valores:
+    - "ligera": para cuando pesan menos de 2000 kg
+    - "media": cuando pesa entre 2000 y 4000 kg (ambos inclusive)
+    - "pesada": cuando pesa más de 4000 kg
+
+*Ayuda*: se vió en la sesión 2 de introR (el curso anterior) cómo hacer la recodificación de variables
+
+```{r}
+pesocat <- c()
+
+pesocat[tiendaCamp$peso<2000] <- "ligera"
+pesocat[tiendaCamp$peso>=2000 & tiendaCamp$peso<=4000] <- "media"
+pesocat[tiendaCamp$peso>4000] <- "pesada" 
+
+tiendaCamp <- cbind(tiendaCamp,pesocat)
+head(tiendaCamp)
+
+```
+
+7.  Utiliza Quick-R <https://www.statmethods.net/graphs/creating.html> u otros recursos online para dibujar un gráfico de dispersión simple que enfrente las variables  `peso` y `altura`. 
+
+```{r}
+library("ggplot2")
+
+plot(tiendaCamp$peso, tiendaCamp$altura)
+
+```
+
+        
+        
+
+8. Utiliza las ayudas y tu creatividad para mejorar dicho gráfico. Por si necesitas inspiración, puedes:
+    + Etiquetar los ejes con nombres adecuados.
+    + Poner un título representativo.
+    + Especificar el rango de la variable peso entre 0 y 10000.
+    + Especificar el rango de la variable altura entre 80 y 220.
+    + Pintar los puntos por colores según la variable `uso`.
+    + Utilizar distintos símbolos en función de la capacidad de la tienda.
+    + Buscar en la ayuda de la función `par()` cómo cambiar el tamaño y color del título.
+    + Crear un modelo de regresión lineal que se ajuste a la nube de puntos. Utiliza para ello la función `lm( y ~ x, data = tiendCamp)`. Guarda el modelo en una variable y añádelo al gráfico con la función `abline()`
+        
+```{r}
+
+plot(tiendaCamp$peso, tiendaCamp$altura, xlab = 'Peso', ylab = 'Altura',
+     main = 'Tiendas de campaña', xlim = c(0,10000), ylim = c(80,220),
+     pch = tiendaCamp$capacidad.person., col=tiendaCamp$uso)
+ajuste <- lm(altura~peso, data=tiendaCamp)
+abline(ajuste, col='blue')
+
+```
+
+    
+
+# ¿Qué entregar? 
+
+
+Para realizar esta tarea se utilizará Rmarkdown, por lo tanto, se entregará un fichero .Rmd que contenga tanto el código necesario para responder a las preguntas como la respuesta a las mismas.
