@@ -13,9 +13,9 @@ Below I summarise what each directory contains and a short note about what I lea
 - 06 TABULAR
 - 07 CONTR
 - 08 CONTR
-- 09 TODO
-- 10 TODO
-- 11 TODO
+- 09 DESCRIPTIVE 
+- 10 INFERENCE 
+- 11 FINAL PROJECT (PCA)
 
 ---
 
@@ -121,32 +121,43 @@ What I learned:
 - Creating reproducible HTML reports showing code, outputs and discussion.
 
 ---
-
-## 09 TODO
+## 09 DESCRIPTIVE
 Files of note:
-- (Not summarised yet) — add links to files in the 09 folder when available.
+- memoria.pdf — **R101. Descriptivos base de datos Galaad**
+- database.csv — Dataset used (Osteopenia variables)
 
 What I learned:
-- Summary to be added.
+- Performing a complete descriptive analysis of a medical dataset ("Galaad"), including data preparation and cleaning.
+- Analyzing categorical and numerical variables such as Sex, Gestation Week (SG), Birth Weight, and Treatment Group.
+- Visualising data distributions using `ggplot2`: creating bar charts for demographic factors and boxplots to analyze Weight over time and Hospitalization days.
+- Formatting professional summary tables using packages like `kableExtra`.
 
 ---
 
-## 10 TODO
+## 10 INFERENCE
 Files of note:
-- (Not summarised yet) — add links to files in the 10 folder when available.
+- memoria inferencia.pdf — **R301. Inferencia base de datos Galaad**
+- database.csv — Dataset used
 
 What I learned:
-- Summary to be added.
+- Conducting advanced statistical inference, specifically **Mixed ANOVA** to analyze weight changes over different time points and demographic groups.
+- Rigorously checking statistical assumptions: Normality (Shapiro-Wilk), Homogeneity of variances (Fligner-Killeen), and Sphericity (Mauchly’s Test).
+- Applying robust statistical methods (Greenhouse-Geisser correction) and non-parametric alternatives (Mann-Whitney U, Welch’s t-test, Wilcoxon) when assumptions were violated.
+- Interpreting interaction plots and reporting p-values and effect sizes ($\eta^2$) according to scientific standards (APA style).
 
 ---
 
-## 11 TODO
+## 11 FINAL PROJECT (PCA)
 Files of note:
-- (Not summarised yet) — add links to files in the 11 folder when available.
+- memoria final.pdf — **Felicidad en el mundo. Análisis de componentes principales**
+- world-happiness-report-2021.csv — Dataset from Kaggle
 
 What I learned:
-- Summary to be added.
-
+- Executing a **Principal Component Analysis (PCA)** to reduce dimensionality and analyze the "World Happiness Report 2021".
+- Data preprocessing and generating correlation matrices to identify redundancies between variables like GDP, Social Support, and Corruption.
+- Validating the suitability of PCA using the **Kaiser-Meyer-Olkin (KMO)** index.
+- Visualising multivariate results: Using Scree plots to decide on component retention and Biplots to interpret the relationship between variables and the positioning of countries in the new dimensions.
+ 
 ---
 
 ## Notes & how to reproduce
