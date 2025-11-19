@@ -1,5 +1,5 @@
 # RStudio Tasks
-This repository contains a collection of R tasks and course exercises I completed using R / RStudio as part of my university courses. Each top-level folder corresponds to a task and contains the R scripts / R Markdown files and the rendered outputs (PDF or HTML), plus the data used for the exercises.
+This repository contains a collection of R tasks and course exercises I completed using R / RStudio as part of my university courses. Each top-level folder corresponds to a task and contains the R (or rendered) outputs for that task.
 
 Below I summarise what each directory contains and a short note about what I learned from the PDF/HTML (or the R script) in that folder.
 
@@ -13,13 +13,16 @@ Below I summarise what each directory contains and a short note about what I lea
 - 06 TABULAR
 - 07 CONTR
 - 08 CONTR
+- 09 TODO
+- 10 TODO
+- 11 TODO
 
 ---
 
 ## 01 intro R
 Files of note:
 - tarea1INTROR.pdf — https://github.com/julioruizm14/Tasks-RStudio/blob/main/01%20intro%20R/tarea1INTROR.pdf
-- tarea1INTROR.Rmd — https://github.com/julioruizm14/Tasks-Rudio/blob/main/01%20intro%20R/tarea1INTROR.Rmd (source)
+- tarea1INTROR.Rmd — https://github.com/julioruizm14/Tasks-RStudio/blob/main/01%20intro%20R/tarea1INTROR.Rmd (source)
 - iris.csv, tratamiento.csv — example datasets
 
 What I learned:
@@ -116,6 +119,33 @@ What I learned:
 - More practice with contrasts and post-hoc comparisons; possibly non-parametric alternatives where assumptions are not met.
 - Applying tests to real datasets and writing up concise interpretations for each result.
 - Creating reproducible HTML reports showing code, outputs and discussion.
+
+---
+
+## 09 TODO
+Files of note:
+- (Not summarised yet) — add links to files in the 09 folder when available.
+
+What I learned:
+- Summary to be added.
+
+---
+
+## 10 TODO
+Files of note:
+- (Not summarised yet) — add links to files in the 10 folder when available.
+
+What I learned:
+- Summary to be added.
+
+---
+
+## 11 TODO
+Files of note:
+- (Not summarised yet) — add links to files in the 11 folder when available.
+
+What I learned:
+- Summary to be added.
 
 ---
 
