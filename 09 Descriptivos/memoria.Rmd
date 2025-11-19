@@ -1,0 +1,300 @@
+---
+title: "R101. Descriptivos base de datos Galaad"
+author: "Julio David Ruiz Mendoza[^1]"
+date: "`r format(Sys.time(), '%A %d de %B de %Y, %H:%M')`"
+output: 
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+linkcolor: RoyalBlue
+urlcolor: BrickRed
+bibliography: ["bibliografia.bib","paquetes.bib"]
+csl: apa.csl
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+[^1]: Estudiante Física UM, \color{red}{julioruizm14@gmail.es}
+
+\renewcommand{\figurename}{Figura}
+\renewcommand{\tablename}{Tabla}
+\renewcommand{\contentsname}{Índice}
+\renewcommand{\listfigurename}{Índice de figuras}
+\renewcommand{\listtablename}{Índice de tablas}
+
+\tableofcontents
+\clearpage
+
+# Lectura y preparación de datos
+
+  
+ ---
+ Trabajamos con el fichero: `database.csv`     
+ Proveniente del fichero: Variables osteopenia COMPLETO Original.xlsx
+ Nº de observaciones: 106   
+ Nº de variables: 31  
+ ---
+
+Vista de datos:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+df <- read.table(file='database.csv', header=T, sep=';', dec = ',', encoding = 'UTF-8')
+
+df$Sexo <- factor(df$Sexo)
+levels(df$Sexo) <- c("Hombre", "Mujer")
+df$SG <- cut(df$SG, breaks = c(24,28,32,34,36),right = F)
+df$Peso.al.nacer <- cut(df$Peso.al.nacer, breaks = c(0,1000,1500,2500,3000,Inf),right = F)
+levels(df$Peso.al.nacer) <-  c("[0,1000)", "[1000,1500)", "[1500,2500)", "[2500,3000]", "(3000,+)")
+df$Num.Grupo <- factor(df$Num.Grupo)
+levels(df$Num.Grupo) <- c("Terapia", "Movilizaciones", "Masaje")
+df$Hospital <- factor(df$Hospital)
+levels(df$Hospital) <- c("Arrixaca", "Elche", "Almería")
+df$Peso.2 <- as.numeric(gsub("[^0-9\\.]", "", df$Peso.2))
+
+
+#summary(df)
+library("kableExtra")
+#kable(summary(df$Sexo))
+
+head(df)
+```
+
+
+
+\clearpage
+
+# Descriptivos  
+  
+Realizamos ahora un análisis descriptivo de todas las variables de la investigación y sus cruces con las
+características basales.
+
+## Sexo
+
+
+
+ | Sexo   | n   | pct |
+ | :-----:|:---:|:---: |
+ | Hombre | 56  | 52.83 |
+ | Mujer  | 50  | 47.17 |
+ | Total  | 106 | 100.00 |
+ Table: Individuos por sexo.
+ 
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library("ggplot2")
+```
+
+
+```{r BarrasSexo, echo=FALSE, fig.cap="Gráfico de barras de individuos por sexo.", fig.height=5, fig.width=5.2, message=FALSE, warning=FALSE}
+
+ggplot(data = df, aes(Sexo)) + geom_bar(aes(fill=Sexo)) +
+  geom_text(aes(label=..count..),stat="count",position=position_dodge(1),vjust=-0.4) +
+  theme(legend.position='none') +
+  labs(title='Individuos por sexo', y = 'Individuos') +
+  ylim(0, 70)
+```
+
+
+\clearpage
+
+## Semana de gestación (SG)
+
+ | Semana de gestación    |     n    | pct |
+ | :----:|:---:|:---: |
+ | [24,28) | 7 | 6.604 |
+ | [28,32) | 65 | 61.321 |
+ | [32,34) | 30 | 28.302 |
+ | [34,36) | 4 | 3.774 |
+ | Total | 106 | 100.000 |
+ Table: Individuos por semana de gestación.
+
+
+```{r BarrasSG, echo=FALSE, fig.cap="Gráfico de barras de individuos por semana de gestación.", fig.height=5.2, fig.width=5}
+
+ggplot(data = df, aes(SG)) + geom_bar(aes(fill=SG) ) +
+  geom_text(aes(label=..count..),stat="count",position=position_dodge(1),vjust=-0.4)+
+  labs(title='Individuos por semana de gestación', x= 'Semana de gestación', y = 'Individuos') +
+  theme(legend.position='none') +
+  ylim(0, 80)
+```
+
+
+
+\clearpage
+
+
+## Peso al nacer
+
+
+  | Peso al nacer |  n  | pct |
+  | :----:|:---:|:---: |
+  | [0,1000) | 13 | 12.264 |
+  | [1000,1500) | 45 | 42.453 |
+  | [1500,2500) | 46 | 43.396 |
+  | [2500,3000] | 2 | 1.887 |
+  | (3000,+) | 0 | 0.000 |
+  | Total | 106 | 100.000 |
+  Table: Individuos por peso al nacer.
+
+```{r BarrasPesonacer, echo=FALSE, fig.cap="Gráfico de barras de individuos por peso al nacer.", fig.height=5.2, fig.width=5}
+
+#table(cut(df$Peso.al.nacer, breaks = c(0,1000,1500,2500,3000,Inf),right = F))
+
+ggplot(data = df, aes(Peso.al.nacer)) + 
+  geom_bar(aes(fill=Peso.al.nacer)) +
+  geom_text(aes(label=..count..),stat="count",position=position_dodge(1),vjust=-0.4)+
+  labs(title='Individuos por peso al nacer', x= 'Peso al nacer', y = 'Individuos') +
+  scale_x_discrete(drop=FALSE) +
+  theme(legend.position='none') +
+  ylim(0, 60)
+```
+
+
+\clearpage
+
+## Grupo 
+
+  | Grupo   |     n    | pct |
+  | :----:|:---:|:---: |
+  | Terapia | 38 | 35.85 |
+  | Movilizaciones | 32 | 30.19 |
+  | Masaje | 36 | 33.96 |
+  | Total | 106 | 100.00 |
+  Table: Individuos por grupo.
+
+
+
+```{r BarrasGrupo, echo=FALSE, fig.cap="Gráfico de barras de individuos por grupo.", fig.height=5.2, fig.width=5}
+
+#table(cut(df$Peso.al.nacer, breaks = c(0,1000,1500,2500,3000,Inf),right = F))
+
+ggplot(data = df, aes(Num.Grupo)) + 
+  geom_bar(aes(fill=Num.Grupo)) +
+  geom_text(aes(label=..count..),stat="count",position=position_dodge(1),vjust=-0.4)+
+  labs(title='Individuos por grupo', x= 'Grupo', y = 'Individuos') +
+  scale_x_discrete(drop=FALSE) +
+  theme(legend.position='none') +
+  ylim(0, 45)
+```
+
+
+
+\clearpage
+
+
+## Hospital
+
+
+ |Hospital | n | pct|
+ |:----:|:---:|:---:|
+ |Arrixaca | 46 | 43.40|
+ |Elche | 22 | 20.75|
+ |Almería | 38 | 35.85|
+ |Total | 106 | 100.00|
+ Table: Individuos por hospital.
+
+
+
+```{r BarrasHospital, echo=FALSE, fig.cap="Gráfico de barras de individuos por hospital.", fig.height=5.2, fig.width=5}
+
+#table(cut(df$Peso.al.nacer, breaks = c(0,1000,1500,2500,3000,Inf),right = F))
+
+ggplot(data = df, aes(Hospital)) + 
+  geom_bar(aes(fill=Hospital)) +
+  geom_text(aes(label=..count..),stat="count",position=position_dodge(1),vjust=-0.4)+
+  labs(title='Individuos por hospital', x= 'Hospital', y = 'Individuos') +
+  scale_x_discrete(drop=FALSE) +
+  theme(legend.position='none') +
+  ylim(0, 50)
+```
+
+
+\clearpage
+
+## Peso
+
+
+
+ |        | N   |  Mín |    Q1   |Mediana| Media  | Sd     | Q3      | Máx  |
+ |:-------|:---:|:----:|:-------:|:----:|:-------:|:------:|:-------:|:----:|
+ | Peso 1 | 106 | 1152 | 1490.00 | 1602 | 1655.08 | 277.63 | 1767.50 | 2795 |
+ | Peso 2 | 98  | 1384 | 1873.75 | 2048 | 2091.84 | 347.58 | 2248.75 | 3500 |
+ | Peso 3 | 63  | 1630 | 2287.50 | 2510 | 2535.67 | 413.14 | 2685.00 | 3910 |
+ |Peso alta| 67 | 1940 | 2115.00 | 2385 | 2528.30 | 479.30 | 2830.00 | 3950 |
+ Table: Descriptivo de la variable Peso para los distintos tiempos.
+
+```{r BoxplotPesos, echo=FALSE, fig.cap="Boxplot de la variable Peso para los distintos tiempos", message=FALSE, warning=FALSE}
+
+library("tidyr")
+dfporPeso <- gather(data = df, key = tiempos, value = Peso, Peso.1, Peso.2, Peso.3, Peso.alta)
+dfporPeso$tiempos <- as.factor(dfporPeso$tiempos)
+
+
+
+
+ggplot(dfporPeso, aes(tiempos, Peso)) + geom_boxplot(aes(fill=tiempos)) +
+  labs(title='Boxplot de la variable Peso para los distintos tiempos', x= '', y = 'Valor') +
+  theme(legend.position='none')
+
+```
+
+
+
+\clearpage
+
+## Días de tratamiento y hospitalización
+
+
+
+|                         	|  N 	| Mín 	|  Q1  	| Mediana 	| Media 	|   Sd  	|  Q3  	| Máx 	|
+|-------------------------	|:--:	|:---:	|:----:	|:-------:	|:-----:	|:-----:	|:----:	|:---:	|
+| Días de tratamiento     	| 83 	|  4  	| 15.0 	|    18   	| 16.42 	|  4.53 	| 20.0 	|  20 	|
+| Días de hospitalización 	| 83 	|  12 	| 29.5 	|    38   	| 42.08 	| 20.19 	| 49.5 	| 137 	|
+Table: Descriptivo de las variables Días de tratamiento y Días de hospitalización
+
+
+```{r BoxplotDias, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Boxplotde las variables Días de tratamiento y Días de hospitalización.", paged.print=FALSE}
+
+dfDias <- gather(data = df, key = Tipo, value = Dias, Días.de.tratamiento,  Días.de.Hospitalización,na.rm=T)
+dfDias$Tipo <- as.factor(dfDias$Tipo)
+levels(dfDias$Tipo) <- c("Días de Hospitalización", "Días de tratamiento")
+
+ggplot(dfDias, aes(x=Tipo, y=Dias)) + facet_wrap(. ~ Tipo, scales = "free") + geom_boxplot(fill='dodgerblue') +
+  labs(title='Boxplot de las variables Días de tratamiento y Días de hospitalización', x= '', y = 'Valor') +
+  theme(legend.position='none')
+
+```
+
+
+# Recomendaciones  
+
+Les recordamos que dependiendo de la normativa de escritura utilizada en sus investigaciones, deberán
+escribir de la manera más adecuada los resultados obtenidos en este informe (por ejemplo, en la rama de
+Ciencias Sociales, siguiendo normativa APA, un p-valor de 0.025, será un p-valor de .025).
+
+
+
+# Agradecimientos
+
+Sección deApoyo Estadístico (SAE), Área Científica y de Investigación (ACTI), Universidad de Murcia (www.um.es/web/acti).
+
+Análisis realizados con [R](https://cran.r-project.org/) versión 4.0.3 (R Core Team 2020).
+
+# Referencias y bibliografía
+```{r eval=FALSE, include=FALSE}
+knitr::write_bib(,file = "paquetes.bib",width = 60)
+```
+---
+nocite: '@*'
+---
+<div id="refs"></div>
+
+\clearpage
+\listoftables
+
+\clearpage
+\listoffigures
+
+

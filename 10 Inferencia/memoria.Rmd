@@ -1,0 +1,727 @@
+---
+title: "R301. Inferencia base de datos Galaad"
+author: "Julio David Ruiz Mendoza[^1]"
+date: "`r format(Sys.time(), '%A %d de %B de %Y, %H:%M')`"
+output: 
+  pdf_document:
+    fig_caption: yes
+    fig_height: 6
+    number_sections: yes
+linkcolor: RoyalBlue
+urlcolor: BrickRed
+bibliography: ["bibliografia.bib","paquetes.bib"]
+csl: apa.csl
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+[^1]: Estudiante Física UM, \color{red}{julioruizm14@gmail.es}
+
+\renewcommand{\figurename}{Figura}
+\renewcommand{\tablename}{Tabla}
+\renewcommand{\contentsname}{Índice}
+\renewcommand{\listfigurename}{Índice de figuras}
+\renewcommand{\listtablename}{Índice de tablas}
+
+\tableofcontents
+\clearpage
+
+# Lectura y preparación de datos
+
+  
+ ---
+ Trabajamos con el fichero: `database.csv`     
+ Proveniente del fichero: Variables osteopenia COMPLETO Original.xlsx
+ Nº de observaciones: 106   
+ Nº de variables: 31  
+ ---
+
+Vista de datos:
+```{r include=FALSE}
+library("tidyr")
+library("dplyr")
+library( "reshape2" )
+library( "ez" )
+library("ggplot2")
+library("WRS2")
+library("onewaytests")
+library("welchADF")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+df0 <- read.table(file='database.csv', header=T, sep=';', dec = ',', encoding = 'UTF-8')
+df <- df0
+df$Sexo <- factor(df$Sexo)
+levels(df$Sexo) <- c("Hombre", "Mujer")
+df$SG <- cut(df$SG, breaks = c(24,28,32,34,36),right = F)
+df$Peso.al.nacer <- cut(df$Peso.al.nacer, breaks = c(0,1000,1500,2500,3000,Inf),right = F)
+levels(df$Peso.al.nacer) <-  c("[0,1000)", "[1000,1500)", "[1500,2500)", "[2500,3000]", "(3000,+)")
+df$Num.Grupo <- factor(df$Num.Grupo)
+levels(df$Num.Grupo) <- c("Terapia", "Movilizaciones", "Masaje")
+df$Hospital <- factor(df$Hospital)
+levels(df$Hospital) <- c("Arrixaca", "Elche", "Almería")
+df$Peso.2 <- as.numeric(gsub("[^0-9\\.]", "", df$Peso.2))
+
+head(df)
+```
+
+
+
+\clearpage
+
+# Inferencia  
+  
+Se trata de ver si hay diferencias signficativas en las distantas variables (numéricas) a lo largo del tiempo y respecto a las diferentes variables sociodemográficas. Dado que tenemos datos independientes y medidas repetidas, se trata de un estudio mixto para el tiempo y cada una de las variables sociodemográficas, por lo que haremos uso de un ANOVA Mixto cuando sea posible. En caso, de no cumplirse los supuestos necesarios, aplicaremos un test ANOVA robusto mixto.
+
+## Peso
+
+Veremos el peso en todos lo tiempos, pero como nos quedamos con menos datos (28 individuos), posteriormente lo veremos sin el último tiempo (alta).
+
+### Sexo
+
+Comprobamos los supuestos.
+ 
+ 
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+dd <- top_n(filter(df, !is.na( Peso.3))[,c("Sexo", "Peso.1", "Peso.2", "Peso.3", "Peso.alta")],28)
+dd <- cbind('id'=1:28,dd)
+dt <- gather(data = dd , key = tiempos, value = Valor, Peso.1, Peso.2, Peso.3, Peso.alta)
+dt$tiempos <- as.factor(dt$tiempos)
+
+```
+ 
+```{r echo=FALSE}
+
+
+cat('NORMALIDAD:')
+cat("")
+cat("")
+cat("Hombre")
+cat("Peso.1")
+shapiro.test(dd$Peso.1[dd$Sexo=="Hombre"])
+
+message("-----------------------------------------------------------------------")
+message("Mujer")
+message("Peso.1")
+shapiro.test(dd$Peso.1[dd$Sexo=="Mujer"])
+
+message("-----------------------------------------------------------------------")
+message("Hombre")
+message("Peso.2")
+shapiro.test(dd$Peso.2[dd$Sexo=="Hombre"])
+
+message("-----------------------------------------------------------------------")
+message("Mujer")
+message("Peso.2")
+shapiro.test(dd$Peso.2[dd$Sexo=="Mujer"])
+
+message("-----------------------------------------------------------------------")
+message("Hombre")
+message("Peso.3")
+shapiro.test(dd$Peso.3[dd$Sexo=="Hombre"])
+
+message("-----------------------------------------------------------------------")
+message("Mujer")
+message("Peso.3")
+shapiro.test(dd$Peso.3[dd$Sexo=="Mujer"])
+
+message("-----------------------------------------------------------------------")
+message("Hombre")
+message("Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Sexo=="Hombre"])
+
+message("-----------------------------------------------------------------------")
+message("Mujer")
+message("Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Sexo=="Mujer"])
+
+
+```
+
+```{r}
+message("HOMOCESTIDAD")
+message()
+message("Peso.1")
+fligner.test(Peso.1~Sexo, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.2")
+fligner.test(Peso.2~Sexo, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.3")
+fligner.test(Peso.3~Sexo, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.alta")
+fligner.test(Peso.alta~Sexo, data=dd)
+
+```
+
+Nos falta normalidad para uno de los cruce y tenemos homocedasticidad. Dado que el ANOVA es robusto
+frente a la falta de algo de normalidad, procedemos a hacer el ANOVA mixto.
+
+```{r}
+
+#summary(aov(Valor ~ Sexo * tiempos, data = dt))
+
+
+
+ddRe <- melt( dd, id = c( "id", "Sexo" ),measure = c( "Peso.1", "Peso.2", "Peso.3","Peso.alta"),variable.name = "tiempo",value.name = "valor" )
+
+#summary( aov( valor ~ tiempo + Error( id / tiempo ),data = ddRe ) )
+
+
+options( contrasts = c( "contr.sum", "contr.poly" ) )
+ezANOVA( data = ddRe, dv = valor, wid = id, between = Sexo, within = tiempo, type = 3 , detailed = T)
+
+
+
+```
+
+No se cumple la esfericidad por lo que nos tenemos que fijar en la correción Greenhouse-Geisser y comprobamos
+que se encuentran diferencias para el tiempo ($\eta^2$ = 0.5097636), pero no para el sexo ni para la
+interacción.
+Donde eta cuadrado es el tamaño del efecto cuyos rangos vienen dados como sigue:
+
+ |Efecto | Pequeño | Mediano | Grande |
+ |:---:|:---:|:---:|:---:|
+ |$\eta^2$ | 0.01 | 0.06| 0.14|
+
+Veamos ahora donde se encuentran estas diferencias respecto al tiempo.
+
+```{r}
+
+pairwise.wilcox.test( ddRe$valor,
+ddRe$tiempo,
+p.adjust = "bonferroni",
+exact = FALSE,
+paired = TRUE )
+```
+
+Se encuentran diferencias entre todos los tiempos.
+Veamos un gráfico para la interacción.
+
+```{r warning=FALSE}
+ggplot(data = ddRe, aes(x = tiempo, y = valor, colour = Sexo,group = Sexo)) +
+    stat_summary(fun = mean, geom = "point") +
+    stat_summary(fun = mean, geom = "line") +
+    labs(title='Gráfico de interacción entre Tiempo y Sexo', x='Tiempo', y= 'Peso (g)')
+
+```
+
+
+\clearpage
+
+### Semana de gestación
+
+En este caso, al quedarnos con aquellos individuos para los que disponemos de datos del peso en todos los
+tiempo, para el nivel [32,34) quedan 2 individuos y para el nivel [34,36) 3 individuos, por lo que uniremos estos
+2 niveles en un único nivel [32,36).
+
+Comprobamos los supuestos.
+
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+df$SG <- cut(df0$SG, breaks = c(28,32,36),right = F)
+dd <- top_n(filter(df, !is.na( Peso.3))[,c("SG", "Peso.1", "Peso.2", "Peso.3", "Peso.alta")],28)
+dd <- cbind('id'=1:28,dd)
+dt <- gather(data =  dd , key = tiempo, value = valor, Peso.1, Peso.2, Peso.3, Peso.alta)
+dt$tiempo <- as.factor(dt$tiempo)
+
+```
+
+```{r}
+
+message('NORMALIDAD:')
+message("")
+
+message("[28,32)    Peso.1")
+shapiro.test(dd$Peso.1[dd$SG=="[28,32)"])
+
+message("-----------------------------------------------------------------------")
+message("[32,36)   Peso.1")
+shapiro.test(dd$Peso.1[dd$SG=="[32,36)"])
+
+message("-----------------------------------------------------------------------")
+
+message("[28,32)    Peso.2")
+shapiro.test(dd$Peso.2[dd$SG=="[28,32)"])
+
+message("-----------------------------------------------------------------------")
+message("[32,36)   Peso.2")
+shapiro.test(dd$Peso.2[dd$SG=="[32,36)"])
+
+message("-----------------------------------------------------------------------")
+message("[28,32)    Peso.3")
+shapiro.test(dd$Peso.3[dd$SG=="[28,32)"])
+
+message("-----------------------------------------------------------------------")
+message("[32,36)   Peso.3")
+shapiro.test(dd$Peso.3[dd$SG=="[32,36)"])
+
+message("-----------------------------------------------------------------------")
+message("[28,32)    Peso.alta")
+shapiro.test(dd$Peso.alta[dd$SG=="[28,32)"])
+
+message("-----------------------------------------------------------------------")
+message("[32,36)   Peso.alta")
+shapiro.test(dd$Peso.alta[dd$SG=="[32,36)"])
+
+```
+```{r}
+message("HOMOCESTIDAD")
+message()
+message("Peso.1")
+fligner.test(Peso.1~SG, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.2")
+fligner.test(Peso.2~SG, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.3")
+fligner.test(Peso.3~SG, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.alta")
+fligner.test(Peso.alta~SG, data=dd)
+```
+Nos falta normalidad para algún cruce y tenemos homocedasticidad. Dado que el ANOVA es robusto frente
+a la falta de algo de normalidad, procedemos a hacer el ANOVA mixto.
+
+```{r}
+options( contrasts = c( "contr.sum", "contr.poly" ) )
+ezANOVA( data = dt, dv = valor, wid = id, between = SG, within = tiempo, type = 3 , detailed = T)
+```
+
+No se cumple la esfericidad por lo que nos tenemos que fijar en la correción *Greenhouse-Geisser* y comprobamos
+que se encuentran diferencias para el tiempo ($\eta^2$ = 0.3763131), pero no para la semana de gestación ni
+para la interacción.  
+
+Veamos un gráfico para la interacción.
+
+
+```{r}
+ggplot(data = dt, aes(x = tiempo, y = valor, colour = SG,group = SG)) +
+    stat_summary(fun = mean, geom = "point") +
+    stat_summary(fun = mean, geom = "line") +
+    labs(title='Gráfico de interacción entre Tiempo y Semana de gestación', x='Tiempo', y= 'Peso (g)')
+```
+
+
+### Peso al nacer
+
+En este caso, al quedarnos con aquellos individuos para los que disponemos de datos del peso en todos los
+tiempo, para el nivel [2500,3000] queda 1 individuo así que lo uniremos con el nivel [15000,2500) en un único
+nivel, que será [1500,3000].
+Comprobamos los supuestos.
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+df$Peso.al.nacer <- cut(df0$Peso.al.nacer, breaks = c(1000, 1500, 3000), right = F, include.lowest = T)
+dd <- top_n(filter(df, !is.na( Peso.3))[,c("Peso.al.nacer", "Peso.1", "Peso.2", "Peso.3", "Peso.alta")],28)
+dd <- cbind('id'=1:28,dd)
+dt <- gather(data =  dd , key = tiempo, value = valor, Peso.1, Peso.2, Peso.3, Peso.alta)
+dt$tiempo <- as.factor(dt$tiempo)
+
+```
+
+```{r}
+
+message('NORMALIDAD:')
+message("")
+
+message("[1000,1500)    Peso.1")
+shapiro.test(dd$Peso.1[dd$Peso.al.nacer=="[1e+03,1.5e+03)"])
+
+message("-----------------------------------------------------------------------")
+message("[1500, 3000]   Peso.1")
+shapiro.test(dd$Peso.1[dd$Peso.al.nacer=="[1.5e+03,3e+03]"])
+
+message("-----------------------------------------------------------------------")
+
+message("[1000,1500)    Peso.2")
+shapiro.test(dd$Peso.2[dd$Peso.al.nacer=="[1e+03,1.5e+03)"])
+
+message("-----------------------------------------------------------------------")
+message("[1500, 3000]    Peso.2")
+shapiro.test(dd$Peso.2[dd$Peso.al.nacer=="[1.5e+03,3e+03]"])
+
+message("-----------------------------------------------------------------------")
+message("[1000,1500)    Peso.3")
+shapiro.test(dd$Peso.3[dd$Peso.al.nacer=="[1e+03,1.5e+03)"])
+
+message("-----------------------------------------------------------------------")
+message("[1500, 3000]    Peso.3")
+shapiro.test(dd$Peso.3[dd$Peso.al.nacer=="[1.5e+03,3e+03]"])
+
+message("-----------------------------------------------------------------------")
+message("[1000,1500)    Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Peso.al.nacer=="[1e+03,1.5e+03)"])
+
+message("-----------------------------------------------------------------------")
+message("[1500, 3000]    Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Peso.al.nacer=="[1.5e+03,3e+03]"])
+
+```
+
+```{r}
+message("HOMOCESTIDAD")
+message()
+message("Peso.1")
+fligner.test(Peso.1~Peso.al.nacer, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.2")
+fligner.test(Peso.2~Peso.al.nacer, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.3")
+fligner.test(Peso.3~Peso.al.nacer, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.alta")
+fligner.test(Peso.alta~Peso.al.nacer, data=dd)
+```
+
+Nos falta normalidad para un par de cruces y tenemos homocedasticidad. Dado que el ANOVA es robusto
+frente a la falta de algo de normalidad, procedemos a hacer el ANOVA mixto.
+
+```{r}
+options( contrasts = c( "contr.sum", "contr.poly" ) )
+ezANOVA( data = dt, dv = valor, wid = id, between = Peso.al.nacer, within = tiempo, type = 3 , detailed = T)
+```
+
+No se cumple la esfericidad por lo que nos tenemos que fijar en la correción *Greenhouse-Geisser* y comprobamos
+que se encuentran diferencias para el tiempo ($\eta^2$ = 0.5756808) y para el peso al nacer ($\eta^2$ = 0.2394081),
+pero no para la interacción.
+Veamos para qué tiempos tenemos las diferencias en el peso al nacer.
+
+```{r}
+t.test(Peso.1 ~ Peso.al.nacer, data = dd, var.equal = TRUE)
+t.test(Peso.2 ~ Peso.al.nacer, data = dd, var.equal = TRUE)
+t.test(Peso.3 ~ Peso.al.nacer, data = dd, var.equal = TRUE)
+t.test(Peso.alta ~ Peso.al.nacer, data = dd, var.equal = TRUE)
+
+```
+
+Encontramos diferencias en todos los tiempos.
+Veamos un gráfico para la interacción.
+
+
+```{r}
+ggplot(data = dt, aes(x = tiempo, y = valor, colour = Peso.al.nacer,group = Peso.al.nacer)) +
+    stat_summary(fun = mean, geom = "point") +
+    stat_summary(fun = mean, geom = "line") +
+    labs(title='Gráfico de interacción entre Tiempo y Semana de gestación', x='Tiempo', y= 'Peso (g)')
+```
+
+
+### Grupo
+
+Comprobamos los supuestos.
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+dd <- top_n(filter(df, !is.na( Peso.3))[,c("Num.Grupo", "Peso.1", "Peso.2", "Peso.3", "Peso.alta")],28)
+dd <- cbind('id'=1:28,dd)
+dt <- gather(data =  dd , key = tiempo, value = valor, Peso.1, Peso.2, Peso.3, Peso.alta)
+dt$tiempo <- as.factor(dt$tiempo)
+
+```
+
+```{r}
+
+message('NORMALIDAD:')
+message("")
+
+message("Terapia    Peso.1")
+shapiro.test(dd$Peso.1[dd$Num.Grupo=="Terapia"])
+
+message("-----------------------------------------------------------------------")
+message("Movilizaciones   Peso.1")
+shapiro.test(dd$Peso.1[dd$Num.Grupo=="Movilizaciones"])
+
+message("-----------------------------------------------------------------------")
+message("Masaje   Peso.1")
+shapiro.test(dd$Peso.1[dd$Num.Grupo=="Masaje"])
+message("-----------------------------------------------------------------------")
+
+
+message("Terapia    Peso.2")
+shapiro.test(dd$Peso.2[dd$Num.Grupo=="Terapia"])
+
+message("-----------------------------------------------------------------------")
+message("Movilizaciones   Peso.2")
+shapiro.test(dd$Peso.2[dd$Num.Grupo=="Movilizaciones"])
+
+message("-----------------------------------------------------------------------")
+message("Masaje   Peso.2")
+shapiro.test(dd$Peso.2[dd$Num.Grupo=="Masaje"])
+message("-----------------------------------------------------------------------")
+
+
+message("Terapia    Peso.3")
+shapiro.test(dd$Peso.3[dd$Num.Grupo=="Terapia"])
+
+message("-----------------------------------------------------------------------")
+message("Movilizaciones   Peso.3")
+shapiro.test(dd$Peso.3[dd$Num.Grupo=="Movilizaciones"])
+
+message("-----------------------------------------------------------------------")
+message("Masaje   Peso.3")
+shapiro.test(dd$Peso.3[dd$Num.Grupo=="Masaje"])
+
+
+message("-----------------------------------------------------------------------")
+message("Terapia    Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Num.Grupo=="Terapia"])
+
+message("-----------------------------------------------------------------------")
+message("Movilizaciones   Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Num.Grupo=="Movilizaciones"])
+
+message("-----------------------------------------------------------------------")
+message("Masaje   Peso.alta")
+shapiro.test(dd$Peso.alta[dd$Num.Grupo=="Masaje"])
+
+```
+
+
+```{r}
+message("HOMOCESTIDAD")
+message()
+message("Peso.1")
+fligner.test(Peso.1~Num.Grupo, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.2")
+fligner.test(Peso.2~Num.Grupo, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.3")
+fligner.test(Peso.3~Num.Grupo, data=dd)
+message("-----------------------------------------------------------------------")
+
+message("Peso.alta")
+fligner.test(Peso.alta~Num.Grupo, data=dd)
+
+```
+
+Tenemos normalidad pero no homocedasticidad y no podemos realizar un ANOVA mixto, pasamos a hacer
+un ANOVA robusto mixto.
+
+
+```{r}
+tsplit( valor ~ Num.Grupo * tiempo , id=id, data = dt )
+```
+
+Se encuentran diferencias para el tiempo ($\eta^2$ = 0.5865396) y para el grupo ($\eta^2$ = 0.2337761), pero no para la interacción.
+Ahora buscamos dónde se encuentran las diferencias entre los grupos para los distintos tiempos.
+
+```{r}
+message("Tiempo: Peso.1")
+
+pairwise.wilcox.test( dt$valor[dt$tiempo=="Peso.1"],dt$Num.Grupo[dt$tiempo=="Peso.1"], p.adjust = "bonferroni",exact = FALSE)
+
+message("Tiempo: Peso.2")
+pairwise.wilcox.test( dt$valor[dt$tiempo=="Peso.2"],dt$Num.Grupo[dt$tiempo=="Peso.2"], p.adjust = "bonferroni",exact = FALSE)
+
+message("Tiempo: Peso.3")
+pairwise.t.test( dt$valor[dt$tiempo=="Peso.3"],dt$Num.Grupo[dt$tiempo=="Peso.3"], p.adjust = "bonferroni",exact = FALSE)
+
+message("Tiempo: Peso.alta")
+pairwise.t.test( dt$valor[dt$tiempo=="Peso.alta"],dt$Num.Grupo[dt$tiempo=="Peso.alta"], p.adjust = "bonferroni",exact = FALSE)
+```
+Encontramos diferencias entre Terapia y Masaje en los 4 tiempos y entre Terapia y Movilizaciones para los
+tiempos 1 y 2.
+Veamos un gráfico para la interacción.
+
+```{r}
+ggplot(data = dt, aes(x = tiempo, y = valor, colour = Num.Grupo, group = Num.Grupo)) +
+    stat_summary(fun = mean, geom = "point") +
+    stat_summary(fun = mean, geom = "line") +
+    labs(title='Gráfico de interacción entre Tiempo y Grupo', x='Tiempo', y= 'Peso (g)')
+```
+
+
+## Días de hospitalización
+
+En este caso, como se trata de un único tiempo, haremos un estudio respecto cada una de las variables sociodegráficas, por lo que aplicaremos un t-test independiente o un ANOVA de una vía dependiente de los niveles del factor.
+
+### Sexo
+
+En este caso, como sexo tiene dos niveles aplicaremos un t-test independiente. Comprobamos los supuestos
+
+ 
+```{r echo=FALSE}
+dd <- df[,c("Sexo", "Días.de.Hospitalización")]
+
+cat('NORMALIDAD:')
+
+shapiro.test(dd$Días.de.Hospitalización[dd$Sexo=="Hombre"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$Sexo=="Mujer"])
+
+
+
+message("HOMOCEDASTICIDAD")
+fligner.test(Días.de.Hospitalización~Sexo, data=dd)
+
+```
+No tenemos normalidad pero sí homocedasticidad, por lo que no podemos aplicar el t-test. Aplicamos en
+este caso la *U de Mann-Whitney*, que es la alternativa no paramétrica a la falta de normalidad.
+```{r}
+wilcox.test(Días.de.Hospitalización~Sexo, data=dd, exact=F )
+```
+No se encuentran diferencias para el sexo.
+
+
+### Semana de gestación
+
+En este caso como para el nivel [24,28) solo hay 1 dato para cada tiempo, lo uniremos con el nivel [28,32)
+en un único nivel, que será [24,32). Nos quedamos así con 3 niveles en la variable, por lo que aplicaremos un
+ANOVA de una vía. Comprobamos los supuestos.
+
+```{r}
+df$SG <- cut(df0$SG, breaks = c(24, 32, 34, 36), right = F)
+dd <- df[,c("SG", "Días.de.Hospitalización")]
+
+
+message('NORMALIDAD:')
+
+shapiro.test(dd$Días.de.Hospitalización[dd$SG=="[24,32)"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$SG=="[32,34)"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$SG=="[34,36)"])
+
+
+
+message("HOMOCEDASTICIDAD")
+fligner.test(Días.de.Hospitalización~SG, data=dd)
+
+```
+
+No tenemos normalidad pero sí homocedasticidad, por lo que no podemos aplicar el ANOVA. Aplicamos el
+test de Welch, que es la alternativa no paramétrica.
+
+```{r}
+summary(aov( Días.de.Hospitalización~SG, data = dd ))
+```
+
+Se encuentran diferencias para la semana de gestación. Vemos entre qué niveles se encuentran esas diferencias.
+```{r}
+pairwise.t.test( dd$Días.de.Hospitalización,dd$SG, p.adjust = "bonferroni",exact = FALSE)
+```
+Se encuentran diferencias entre las semanas [24,32) y [32,34).
+
+
+### Peso al nacer
+
+En este caso para el nivel [2500,3000] quedan 2 individuos así que lo uniremos con el nivel [15000,2500) en
+un único nivel, que será [1500,3000]. Nos quedamos así con 3 niveles en la variable, por lo que aplicaremos un
+ANOVA de una vía. Comprobamos los supuestos.
+```{r}
+df$Peso.al.nacer <- cut(df0$Peso.al.nacer, breaks = c(0,1000,1500,3000), right = F)
+dd <- df[,c("Peso.al.nacer", "Días.de.Hospitalización")]
+
+
+message('NORMALIDAD:')
+
+shapiro.test(dd$Días.de.Hospitalización[dd$Peso.al.nacer=="[0,1e+03)"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$Peso.al.nacer=="[1e+03,1.5e+03)"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$Peso.al.nacer=="[1.5e+03,3e+03)"])
+
+
+
+message("HOMOCEDASTICIDAD")
+fligner.test(Días.de.Hospitalización~Peso.al.nacer, data=dd)
+
+```
+
+Nos falta normalidad para uno de los niveles y tenemos homocedasticidad. Dado que el ANOVA es robusto
+frente a la falta de algo de normalidad, procedemos a hacer el ANOVA de una vía.
+
+```{r}
+summary(aov(Días.de.Hospitalización~Peso.al.nacer, data = dd))
+```
+
+
+
+Se encuentran diferencias para el peso al nacer. Vemos entre qué niveles se encuentran esas diferencias.
+```{r}
+pairwise.t.test( dd$Días.de.Hospitalización,dd$Peso.al.nacer, p.adjust = "bonferroni",exact = FALSE)
+```
+
+### Grupo
+
+Como tenemos 3 niveles en la variable, aplicaremos un ANOVA de una vía. Comprobamos los supuestos.
+
+```{r}
+dd <- df[,c("Num.Grupo", "Días.de.Hospitalización")]
+
+
+message('NORMALIDAD:')
+
+shapiro.test(dd$Días.de.Hospitalización[dd$Num.Grupo=="Terapia"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$Num.Grupo=="Movilizaciones"])
+message("-----------------------------------------------------------------------")
+shapiro.test(dd$Días.de.Hospitalización[dd$Num.Grupo=="Masaje"])
+
+
+
+message("HOMOCEDASTICIDAD")
+fligner.test(Días.de.Hospitalización~Num.Grupo, data=dd)
+
+```
+
+No tenemos normalidad ni homocedasticidad, por lo que no podemos aplicar el ANOVA. Aplicamos el test
+de Welch, que es la alternativa no paramétrica.
+
+```{r}
+summary(welchADF.test(formula=Días.de.Hospitalización~Num.Grupo, data = dd))
+```
+No se encuentran diferencias para el grupo.
+
+
+# Recomendaciones  
+
+Les recordamos que dependiendo de la normativa de escritura utilizada en sus investigaciones, deberán
+escribir de la manera más adecuada los resultados obtenidos en este informe (por ejemplo, en la rama de
+Ciencias Sociales, siguiendo normativa APA, un p-valor de 0.025, será un p-valor de .025).
+
+
+
+# Agradecimientos
+
+Sección deApoyo Estadístico (SAE), Área Científica y de Investigación (ACTI), Universidad de Murcia (www.um.es/web/acti).
+
+Análisis realizados con [R](https://cran.r-project.org/) versión 4.0.3 (R Core Team 2020).
+
+# Referencias y bibliografía
+
+```{r eval=FALSE, include=FALSE}
+knitr::write_bib(,file = "paquetes.bib",width = 60)
+```
+
+---
+nocite: '@*'
+---
+<div id="refs"></div>
+
+\clearpage
+\listoftables
+
+\clearpage
+\listoffigures
+
+

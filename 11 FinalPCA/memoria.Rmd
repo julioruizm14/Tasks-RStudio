@@ -1,0 +1,287 @@
+---
+title: "Felicidad en el mundo. Análisis de componentes principales"
+subtutle: "Tarea final - Prácticas externas SAE"
+author: "Julio David Ruiz Mendoza"
+date: "`r format(Sys.time(), '%A %d de %B de %Y')`"
+output: 
+  pdf_document:
+    fig_caption: yes
+    fig_crop: no
+    fig_width: 5.5
+    number_sections: yes
+header-includes:
+  \usepackage{float}
+linkcolor: RoyalBlue
+urlcolor: BrickRed
+bibliography: ["bibliografia.bib","paquetes.bib"]
+csl: apa.csl
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+\renewcommand{\figurename}{Figura}
+\renewcommand{\tablename}{Tabla}
+\renewcommand{\contentsname}{Índice}
+\renewcommand{\listfigurename}{Índice de figuras}
+\renewcommand{\listtablename}{Índice de tablas}
+
+\tableofcontents
+\clearpage
+
+```{r include=FALSE}
+library("tidyr")
+library("knitr")
+library("kableExtra")
+library("dplyr")
+library("ggplot2")
+library( "FactoMineR" )
+library( "factoextra" )
+library( "corrplot" )
+library( "psych" )
+library( "Factoshiny" )
+library( "rgl" )
+library("purrr")
+library("tibble")
+library("tidyr")
+```
+
+# Introducción
+
+En este documento vamos a tratar un conjunto datos sobre la felicidad en distintos paises alrededor del planeta. Vamos a importar el archivo y preparar el dataframe seleccionando los datos que nos sean útiles, después vamos a hacer una introducción a los datos y por último definir brevemente qué es un PCA.
+
+He elegido este tema porque parece interesante saber los factores que influyen en la felicidad y en qué países la población es más feliz.
+
+
+# Lectura y preparación de datos
+
+  
+ ---
+ Trabajamos con el fichero: `world-happiness-report-2021.csv`     
+ Proveniente de la base de datos [Kaggle](https://www.kaggle.com/ajaypalsinghlo/world-happiness-report-2021)
+ Nº de observaciones: 149  
+ Nº de variables: 20  
+ ---
+
+Vista de datos:
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+df0 <- read.table(file='world-happiness-report-2021.csv', header=T, sep = ',', encoding = 'UTF-8', stringsAsFactors = T)
+
+df0 <- df0 %>%
+  rename(Pais = X.U.FEFF.Country.name, Region = Regional.indicator, Felicidad = Ladder.score,
+         SD.puntos = Standard.error.of.ladder.score, PIB = Logged.GDP.per.capita,
+         Esp.vida = Healthy.life.expectancy, Libertad = Freedom.to.make.life.choices,Generosidad=Generosity, Apoyo.social=Social.support,
+         Corrupcion = Perceptions.of.corruption, Distopia = Ladder.score.in.Dystopia,
+         EXP.PIB = Explained.by..Log.GDP.per.capita, EXP.ApoyoSocial = Explained.by..Social.support,
+         EXP.Esp.vida = Explained.by..Healthy.life.expectancy, EXP.Libertad = Explained.by..Freedom.to.make.life.choices,
+         EXP.Generosidad = Explained.by..Generosity, EXP.Corr = Explained.by..Perceptions.of.corruption,
+         Distopia.Residual = Dystopia...residual)
+
+df <- df0[,-c(4,5,6,13:20)]
+
+levels(df$Region) <- factor(c("EUE", "Indep Estates", "ASE", "LAM", "AFN", "AMN", "ASS", "ASE", "AFS", "EUW"))
+
+knitr::kable(head(df, 12),  "pipe")
+```
+
+
+\clearpage
+
+# Análisis de los datos
+
+## Resumen estadístico
+
+Vamos a realizar un breve resumen de las variables numéricas que tenemos:
+
+```{r}
+dfn <- select_if(df, is.numeric)
+dfcor<-cor(dfn)
+data.frame( Min = apply( dfn, 2, min ), 
+                            Q1 = apply( dfn, 2, quantile, 1/4 ),
+                            Mediana = apply( dfn, 2, median ),
+                            Media = apply( dfn, 2, mean ), 
+                            Q3 = apply( dfn, 2, quantile, 3/4 ), 
+                            Max = apply( dfn, 2, max ), 
+                            Var = apply( dfn, 2, var ) ) %>%
+  knitr::kable(caption = "Resumen estadístico de las variables",  "pipe", digits = 2)
+```
+
+
+## Vista de los datos
+```{r plotdatos, fig.cap="\\label{plotdatos}Representación de todas las variables.", fig.height=5, fig.width=6}
+plot(dfn)
+```
+ 
+No podemos ignorar que hay variables que están relacionadas de algun modo .
+
+
+```{r plotdatos2, fig.cap="Representación del PIB frente a la esperanza de vida.", fig.height=3, fig.width=5.2}
+ggplot( data =dfn, aes(PIB,Esp.vida))+ geom_point() + labs(title = "PIB frente a Esperanza de vida")
+```
+
+Por ejemplo en el PIB de un país y la esperanza de vida podemos suponer que tienen dependencia, más adelante veremos si es así, o por el contrario nos estamos equivocando.
+
+## Países más felices
+
+Por lo general la calidad de vida será influyente en la felicidad, siendo factores como la pobreza y las guerras que afectan negativamente. En los países más felices 9 de los 10 del top se sitúan en Europa.
+
+```{r}
+dfhap <- df%>%
+  arrange(Felicidad) 
+```
+
+```{r plotmasfelices, fig.height=3, fig.width=5.5 ,fig.cap="Top 10 países más felices"}
+
+ggplot(tail(dfhap,10), aes(x=reorder(Pais, Felicidad), y=Felicidad)) + 
+  labs(y="Felicidad (máx 10)", x = '',
+       title="10 países más felices del mundo",
+       caption="Fuente: The World Happiness Report 2021") +
+  geom_col(aes(y = Felicidad, fill = Felicidad)) +
+  geom_text(aes(y = Felicidad), label = round(tail(dfhap$Felicidad,10),2), nudge_y = 0.4) + 
+  ylim(0,10) + 
+  scale_fill_gradient( high = '#D1E8A1', low= '#7EA829') + 
+  theme(axis.text.x = element_text(size = 6), legend.position = 'None')
+```
+  
+
+```{r plotmenosfelices, fig.cap="Top 10 países menos felices", fig.height=3, fig.width=5.5 }
+
+ggplot(head(dfhap,10), aes(x=reorder(Pais, Felicidad), y=Felicidad)) + 
+  labs(y="Felicidad (máx 10)", x = '',
+       title="10 países menos felices del mundo",
+       caption="Fuente: The World Happiness Report 2021") +
+  geom_col(aes(y = Felicidad, fill = Felicidad)) +
+    geom_text(aes(y = Felicidad), label = round(head(dfhap$Felicidad,10),2), nudge_y = 0.4) + 
+  ylim(0,10) + 
+  scale_fill_gradient(low = '#171717', high = '#3D550C') + 
+  theme(axis.text.x = element_text(size = 6), legend.position = 'None')
+```
+  
+## Felicidad por region
+
+```{r fig.cap="Gráfico de barras Felicidad por region.", fig.height=3, fig.width=5.5 }
+ggplot(df, aes(x=reorder(Region, Felicidad), y=Felicidad)) + 
+  labs(y="Felicidad (máx 10)", x = '',
+       title="Felicidad por regiones del mundo") +
+  stat_summary(fun = mean, geom = "col", fill = c("#475E17","#475E17","#638320","#7EA829", "#9ACD32", "#9ACD32", "#ACD657", "#BEDF7C", "#D1E8A1")) +
+  ylim(0,10) + 
+  scale_fill_gradient2(low = 'black', high = '#7FB185', mid = 'white', midpoint = 5) + 
+  theme(axis.text.x = element_text(size = 8), legend.position = 'None')
+```
+
+
+
+\clearpage
+
+# PCA
+
+## Qué es un PCA
+
+Como hemos visto en la figura \ref{plotdatos} hay variables que dependen de otras en cierta medida, a esto se le llama **correlación** y adopta un valor de -1 a 1. Una alta correlación en nuestro datos significa que hay redundancia en nuestros datos, es decir tenemos información repetida, que con el cambio apropiado de variables nos permitirá guardar gran porcentage de la información con menos variables.
+
+**PCA** (Análisis de componentes principales) es un método de análisis de datos multivariante que nos permite resumir y visualizar la información contenida en un gran conjunto de datos de variables cuantitativas.
+
+
+## Procedimiento
+
+### Correlación
+
+El primer paso para realizar un PCA es ver si nuestras variables pueden estar relacionadas como hemos visto anteriormente, y a continuación crear una matriz de correlaciones como la siguiente:
+
+```{r tablascor}
+  knitr::kable( dfcor, caption = "Correlación de las variables.",  "pipe", digits = 2, align = "cccccccc")
+```
+
+```{r plotcor, fig.cap="Correlación de las variables.", fig.height=4, fig.width=7}
+corrplot(dfcor,type = "lower", 
+          order = "hclust", 
+          tl.col = "black")
+```
+
+Factores como la riqueza, la salud y el apoyo social son los más importantes para determinar la felicidad, mientras que la generosidad y la corrupción son las menos relacionadas.
+
+Ahora calcularemos el índice de Kaiser-Meyer-Olkin (KMO), que compara los valores de correlaciones entre pares de variables. Si el índice adopta un valor proximo a 1 será viable realizar el PCA.
+
+```{r}
+( psych::KMO( dfn )) #Overall MSA =  0.84 se puede hacer pca 
+```
+
+El índice global es 0.84 por lo que vamos a realizar el análisis.
+
+  
+### Cálculo PCA
+
+Como ya lo hemos justificado procedemos a realizar los cálculos.
+
+
+```{r}
+df_pca <- PCA( dfn , ncp = 7, graph = FALSE)
+
+knitr::kable( df_pca$eig, caption = "Autovalores y varianza acumulada por cada componente.",  "pipe", digits = 2)
+
+```
+
+
+Lo que significa que con tan solo 3 componentes acumulamos un 84.44% de la varianza.  
+
+
+\clearpage  
+  
+
+
+```{r eigval, fig.cap="Gráfico de sedimentación de los autovalores", fig.height=4.5, fig.width=7}
+fviz_screeplot( df_pca, ncp = 7 , ggtheme = theme_grey())
+```
+
+
+### Representación gráfica. Interpretación
+  
+Procedemos a representar el peso que tiene cada variable de las originales en las nuevas componentes y los individuos en las dos primeras dimensiones principales.  
+  
+```{r  fig.cap="Representación variables PCA en dos dimensiones", fig.height=4, fig.width=7}
+fviz_pca_var( df_pca, 
+              axes = c( 1, 2), 
+              col.var = "cos2", 
+              alpha.var = "contrib" ) + 
+  theme_grey()
+```
+  
+  
+La primera dimensión está relacionada con el bienestar del individuo, y la segunda diremos que tiene que ver con lo egoísta que es la sociedad. 
+  
+  
+```{r fig.cap="Representación de los individuos", fig.height=4, fig.width=9}
+fviz_pca_ind( df_pca, col.ind = df$Region, alpha.ind = "contrib" ) + 
+  theme_grey()
+```
+  
+  
+Se sitúan a la izquierda países del Sur de África y Sur de Ásia, por media Norte de África, Latinoamérica y Este de Ásia, y finalmente a la derecha se sitúan los países de Norte de América y Europa.  
+  
+  
+  
+\clearpage
+
+# Referencias y bibliografía
+
+```{r eval=FALSE, include=FALSE}
+knitr::write_bib(,file = "paquetes.bib",width = 60)
+```
+
+---
+nocite: '@*'
+---
+<div id="refs"></div>
+
+\clearpage
+\listoftables
+
+\clearpage
+\listoffigures
+
+

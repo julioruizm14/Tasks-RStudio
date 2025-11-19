@@ -1,0 +1,14 @@
+\contentsline {section}{\numberline {1}Introducción}{2}{section.1}%
+\contentsline {section}{\numberline {2}Lectura y preparación de datos}{2}{section.2}%
+\contentsline {section}{\numberline {3}Análisis de los datos}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Resumen estadístico}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Vista de los datos}{3}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Países más felices}{4}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Felicidad por region}{5}{subsection.3.4}%
+\contentsline {section}{\numberline {4}PCA}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Qué es un PCA}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Procedimiento}{6}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Correlación}{6}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}Cálculo PCA}{6}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}Representación gráfica. Interpretación}{8}{subsubsection.4.2.3}%
+\contentsline {section}{\numberline {5}Referencias y bibliografía}{10}{section.5}%
