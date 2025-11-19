@@ -1,5 +1,4 @@
-# Tasks - RStudio (University Exercises)
-
+# RStudio Tasks
 This repository contains a collection of R tasks and course exercises I completed using R / RStudio as part of my university courses. Each top-level folder corresponds to a task and contains the R scripts / R Markdown files and the rendered outputs (PDF or HTML), plus the data used for the exercises.
 
 Below I summarise what each directory contains and a short note about what I learned from the PDF/HTML (or the R script) in that folder.
